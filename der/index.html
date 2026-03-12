@@ -1,0 +1,831 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smile Powered Website Γ£¿</title>
+  <meta name="description" content="A magical website that activates when you smile. Experience the future of emotion-powered web technology." />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <!-- face-api.js ΓÇö NOT deferred so it's available on DOMContentLoaded -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --purple: #9b5de5;
+      --blue: #00b4d8;
+      --pink: #f72585;
+      --cyan: #06d6a0;
+      --gold: #ffd60a;
+      --bg-dark: #05010f;
+      --glass-bg: rgba(255,255,255,0.05);
+      --glass-border: rgba(255,255,255,0.12);
+      --pink-glow: 0 0 20px rgba(247,37,133,0.6), 0 0 40px rgba(247,37,133,0.3);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg-dark);
+      color: #fff;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ===== STAR FIELD ===== */
+    #starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .star {
+      position: absolute; border-radius: 50%; background: #fff;
+      animation: twinkle var(--dur, 3s) ease-in-out infinite; opacity: 0;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; transform: scale(0.6); }
+      50% { opacity: var(--op, 0.8); transform: scale(1); }
+    }
+
+    /* ===== PARTICLES ===== */
+    #particles-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+    /* ===== SECTIONS ===== */
+    .section {
+      position: relative; z-index: 10; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; padding: 2rem;
+    }
+    .section.hidden { display: none !important; }
+    .section.visible { display: flex; }
+    .section.fade-in { animation: fadeInUp 0.9s ease forwards; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== GLASS CARD ===== */
+    .glass-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 2.5rem 3rem;
+      max-width: 680px; width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    /* ===== GRADIENT TEXT ===== */
+    .gradient-text {
+      background: linear-gradient(135deg, var(--purple), var(--blue), var(--pink));
+      background-size: 300% 300%;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; animation: gradientShift 4s ease infinite;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.9rem 2.4rem; border: none; border-radius: 50px;
+      font-family: 'Poppins', sans-serif; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: all 0.3s ease;
+      letter-spacing: 0.04em; position: relative; overflow: hidden;
+    }
+    .btn::before { content:''; position:absolute; inset:0; background:rgba(255,255,255,0.1); opacity:0; transition:opacity 0.3s; }
+    .btn:hover::before { opacity:1; }
+    .btn:hover { transform: translateY(-3px) scale(1.03); }
+    .btn:active { transform: translateY(0) scale(0.98); }
+
+    .btn-primary { background: linear-gradient(135deg, var(--purple), var(--pink)); color:#fff; box-shadow:0 4px 24px rgba(155,93,229,0.5); }
+    .btn-primary:hover { box-shadow:0 8px 40px rgba(155,93,229,0.7); }
+    .btn-secondary { background: linear-gradient(135deg, var(--blue), var(--cyan)); color:#fff; box-shadow:0 4px 24px rgba(0,180,216,0.5); }
+    .btn-secondary:hover { box-shadow:0 8px 40px rgba(0,180,216,0.7); }
+    .btn-gold { background: linear-gradient(135deg, #ffd60a, #ff9500); color:#111; box-shadow:0 4px 24px rgba(255,214,10,0.5); }
+    .btn-gold:hover { box-shadow:0 8px 40px rgba(255,214,10,0.8); }
+    .btn-secret {
+      background: linear-gradient(135deg, var(--pink), var(--purple)); color:#fff;
+      animation: pulseShadow 2s ease infinite;
+    }
+    @keyframes pulseShadow {
+      0%,100% { box-shadow:0 0 20px rgba(247,37,133,0.5), 0 0 40px rgba(155,93,229,0.3); }
+      50%      { box-shadow:0 0 40px rgba(247,37,133,0.8), 0 0 80px rgba(155,93,229,0.5); }
+    }
+
+    /* ===== TYPING ===== */
+    .typing-line { font-size: clamp(1.6rem, 4vw, 2.8rem); font-weight:700; line-height:1.3; min-height:1.4em; margin-bottom:1rem; }
+    .cursor {
+      display:inline-block; width:3px; height:1em;
+      background:var(--purple); margin-left:2px;
+      animation:blink 0.7s step-end infinite; vertical-align:middle;
+    }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+    /* ===== LANDING ===== */
+    #landing .subtitle { font-size:1.1rem; color:rgba(255,255,255,0.5); margin-bottom:2.5rem; font-weight:300; }
+
+    /* ===== FLOATING CAMERA PiP ===== */
+    #cam-pip {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 1000;
+      display: none;          /* shown via JS once camera starts */
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    #cam-pip.visible { display: flex; }
+    .pip-frame {
+      width: 160px; height: 120px;
+      border-radius: 16px; overflow: hidden;
+      position: relative;
+      box-shadow: 0 0 0 2px rgba(155,93,229,0.6), 0 8px 32px rgba(0,0,0,0.6);
+      background: #000;
+      cursor: grab;
+    }
+    #webcam {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    /* Scan line inside PiP */
+    .pip-scan {
+      position: absolute; left:0; right:0; height:2px;
+      background: linear-gradient(90deg, transparent, var(--purple), var(--blue), transparent);
+      animation: scan 2s ease-in-out infinite; pointer-events:none;
+    }
+    @keyframes scan {
+      0%   { top: 0; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    /* Detection ring */
+    .pip-ring {
+      position: absolute; inset: -4px; border-radius: 20px;
+      border: 3px solid transparent;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+      pointer-events: none;
+    }
+    .pip-ring.detecting { border-color: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+    .pip-ring.smiling   { border-color: var(--gold); box-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold); }
+    .pip-label {
+      font-size: 0.7rem; font-weight:600;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 999px;
+    }
+    /* Smile status indicator on PiP */
+    .pip-status {
+      font-size: 0.72rem; color: rgba(255,255,255,0.5);
+      background: rgba(0,0,0,0.6); padding: 2px 10px; border-radius:999px;
+      white-space: nowrap;
+    }
+
+    /* ===== CAMERA GRANT PAGE (inline preview removed ΓÇö now in pip) ===== */
+    #camera-section .cam-instruction {
+      display:flex; flex-direction:column; align-items:center; gap:1.2rem;
+    }
+    .cam-placeholder {
+      width:200px; height:150px; border-radius:16px;
+      background: rgba(155,93,229,0.08);
+      border: 2px dashed rgba(155,93,229,0.4);
+      display:flex; align-items:center; justify-content:center;
+      font-size:3rem;
+      animation: pulse-opacity 2s ease infinite;
+    }
+    @keyframes pulse-opacity { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+    #grant-status { font-size:0.9rem; color:rgba(255,255,255,0.55); min-height:1.4em; }
+    .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--cyan); margin-right:6px; animation:blink 1s step-end infinite; }
+
+    /* ===== SMILE DETECTED ===== */
+    #smile-detected h2 { font-size: clamp(1.8rem, 4vw, 3rem); margin-bottom:0.5rem; }
+    #smile-detected > .glass-card > p { color:rgba(255,255,255,0.7); margin-bottom:1rem; }
+    .emoji-burst { font-size:3rem; margin-bottom:1rem; animation:bounce 1s ease infinite alternate; }
+    @keyframes bounce { from{transform:scale(1) rotate(-5deg);} to{transform:scale(1.2) rotate(5deg);} }
+
+    /* ===== COMPLIMENT BOX ===== */
+    #compliment-box {
+      margin-top:1rem; padding:1.2rem 1.8rem;
+      background:rgba(155,93,229,0.1); border:1px solid rgba(155,93,229,0.3);
+      border-radius:16px; font-size:1.05rem; font-style:italic;
+      color:rgba(255,255,255,0.9); min-height:3.5em;
+      display:flex; align-items:center; justify-content:center;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    /* ===== ENERGY METER ===== */
+    .energy-section { margin-top:1.8rem; width:100%; }
+    .energy-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; }
+    .energy-header .label { font-weight:600; letter-spacing:0.05em; text-transform:uppercase; font-size:0.8rem; color:rgba(255,255,255,0.7); }
+    #energy-percent { font-weight:700; color:var(--cyan); font-size:1rem; }
+    .progress-track { width:100%; height:14px; background:rgba(255,255,255,0.08); border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,0.1); }
+    #energy-bar {
+      height:100%; width:0%; border-radius:999px;
+      background:linear-gradient(90deg, var(--purple), var(--blue), var(--cyan));
+      transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1);
+      box-shadow:0 0 12px var(--blue); position:relative;
+    }
+    #energy-bar::after { content:''; position:absolute; right:0; top:0; bottom:0; width:20px; background:rgba(255,255,255,0.4); border-radius:999px; filter:blur(4px); }
+    .energy-tip { font-size:0.78rem; color:rgba(255,255,255,0.4); margin-top:0.5rem; text-align:center; }
+
+    /* ===== SECRET ===== */
+    #secret-section { text-align:center; }
+    #secret-section h2 { font-size:clamp(2rem,5vw,3.5rem); margin-bottom:1rem; }
+    #secret-section .secret-msg { font-size:1.2rem; line-height:1.8; color:rgba(255,255,255,0.85); margin-bottom:2rem; }
+    .heart-container { position:fixed; inset:0; pointer-events:none; z-index:999; overflow:hidden; }
+    .floating-heart { position:absolute; animation:floatHeart 3s ease-out forwards; opacity:0; }
+    @keyframes floatHeart {
+      0%   { transform:translateY(0) scale(0.5) rotate(var(--rot)); opacity:1; }
+      100% { transform:translateY(-120vh) scale(1.2) rotate(var(--rot2)); opacity:0; }
+    }
+
+    /* ===== CONFETTI ===== */
+    .confetti-piece {
+      position:fixed; border-radius:2px; pointer-events:none; z-index:9999;
+      animation:confettiFall var(--dur,3s) ease-out var(--delay,0s) forwards;
+    }
+    @keyframes confettiFall {
+      0%   { transform:translateY(-10px) rotate(0deg) translateX(0); opacity:1; }
+      100% { transform:translateY(110vh) rotate(720deg) translateX(var(--dx,0px)); opacity:0; }
+    }
+
+    /* ===== STAR BURST ===== */
+    .star-burst { position:fixed; pointer-events:none; z-index:9999; border-radius:50%; animation:starBurstAnim 1s ease-out forwards; }
+    @keyframes starBurstAnim { 0%{transform:scale(0);opacity:1;} 100%{transform:scale(3);opacity:0;} }
+
+    /* ===== BACKGROUND GLOW ===== */
+    .bg-glow { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:1; opacity:0; transition:opacity 2s ease; }
+    .bg-glow.active { opacity:0.18; }
+    .glow-1 { width:600px; height:600px; background:var(--purple); top:-150px; left:-150px; }
+    .glow-2 { width:500px; height:500px; background:var(--blue); bottom:-100px; right:-100px; }
+    .glow-3 { width:400px; height:400px; background:var(--pink); top:40%; left:30%; }
+
+    /* ===== LOADING ===== */
+    #loading-overlay {
+      position:fixed; inset:0; background:var(--bg-dark); z-index:10000;
+      display:flex; align-items:center; justify-content:center; flex-direction:column; gap:1rem;
+      transition:opacity 0.8s ease;
+    }
+    #loading-overlay.fade-out { opacity:0; pointer-events:none; }
+    .loader-text { font-size:1.1rem; color:rgba(255,255,255,0.5); }
+    .loader-ring { width:60px; height:60px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--purple); border-right-color:var(--blue); border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg);} }
+
+    /* ===== BADGE ===== */
+    .badge { display:inline-block; padding:0.25rem 0.8rem; background:rgba(155,93,229,0.15); border:1px solid rgba(155,93,229,0.4); border-radius:999px; font-size:0.75rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--purple); margin-bottom:1rem; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .glass-card { padding:1.8rem 1.5rem; }
+      #cam-pip { bottom:16px; right:12px; }
+      .pip-frame { width:120px; height:90px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading -->
+  <div id="loading-overlay">
+    <div class="loader-ring"></div>
+    <div class="loader-text" id="loading-text">Loading AI modelsΓÇª</div>
+  </div>
+
+  <!-- Background glows -->
+  <div class="bg-glow glow-1" id="glow1"></div>
+  <div class="bg-glow glow-2" id="glow2"></div>
+  <div class="bg-glow glow-3" id="glow3"></div>
+
+  <div id="starfield"></div>
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- ====== PERSISTENT FLOATING CAMERA PiP ====== -->
+  <div id="cam-pip">
+    <div class="pip-frame" id="pip-frame">
+      <video id="webcam" autoplay muted playsinline></video>
+      <div class="pip-scan"></div>
+      <div class="pip-ring" id="pip-ring"></div>
+    </div>
+    <div class="pip-label">≡ƒô╖ Smile Detector</div>
+    <div class="pip-status" id="pip-status">InitializingΓÇª</div>
+  </div>
+
+  <!-- ====== SECTION 1: LANDING ====== -->
+  <section id="landing" class="section visible">
+    <div class="glass-card">
+      <div class="badge">Γ£¿ Emotion-Powered</div>
+      <div class="typing-line gradient-text" id="line1"></div>
+      <div class="typing-line" id="line2" style="opacity:0;transition:opacity 0.8s;"></div>
+      <p class="subtitle" id="landing-sub" style="opacity:0;transition:opacity 0.8s 0.4s;">
+        No electricity. No subscriptions. Just you.
+      </p>
+      <button id="start-btn" class="btn btn-primary" style="opacity:0;transition:opacity 0.8s 0.6s;" onclick="goToCamera()">
+        ΓÜí Start the Experience
+      </button>
+    </div>
+  </section>
+
+  <!-- ====== SECTION 2: CAMERA GRANT ====== -->
+  <section id="camera-section" class="section hidden">
+    <div class="glass-card">
+      <div class="badge">≡ƒôí Energy Detection</div>
+      <h2 style="font-size:1.8rem;margin-bottom:0.6rem;">Powering UpΓÇª</h2>
+      <p style="color:rgba(255,255,255,0.55);font-size:0.95rem;margin-bottom:1.5rem;">
+        Allow camera access to detect your smile.<br/>
+        Everything runs locally ΓÇö nothing is sent anywhere.
+      </p>
+      <div class="cam-instruction">
+        <div class="cam-placeholder" id="cam-placeholder">≡ƒô╖</div>
+        <div id="grant-status"><span class="status-dot"></span>Requesting cameraΓÇª</div>
+        <button class="btn btn-gold" id="demo-btn" style="display:none;" onclick="triggerDemoSmile()">
+          ≡ƒÿä Tap to Smile (Demo Mode)
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== SECTION 3: SMILE DETECTED ====== -->
+  <section id="smile-detected" class="section hidden">
+    <div class="glass-card">
+      <div class="badge">≡ƒƒó System Active</div>
+      <div class="emoji-burst">≡ƒÿä</div>
+      <h2 class="gradient-text">Smile Detected</h2>
+      <p>Power source: <strong style="color:var(--cyan);">Activated</strong> ΓÇö keep smiling to charge energy!</p>
+
+      <!-- Compliment -->
+      <div id="compliment-box">≡ƒîƒ Generating your complimentΓÇª</div>
+      <button class="btn btn-secondary" style="margin-top:1.2rem;" onclick="generateCompliment()">
+        ≡ƒÆ¼ Generate Compliment
+      </button>
+
+      <!-- Energy Meter -->
+      <div class="energy-section">
+        <div class="energy-header">
+          <div class="label">ΓÜí Smile Energy Level</div>
+          <div id="energy-percent">0%</div>
+        </div>
+        <div class="progress-track">
+          <div id="energy-bar"></div>
+        </div>
+        <div class="energy-tip" id="energy-tip">Smile again into the camera to charge! ≡ƒæå</div>
+      </div>
+
+      <!-- Secret unlock -->
+      <div id="secret-unlock-wrap" style="margin-top:1.5rem;display:none;">
+        <button class="btn btn-secret" onclick="showSecret()">≡ƒöô Unlock Secret</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== SECTION 4: SECRET ====== -->
+  <section id="secret-section" class="section hidden">
+    <div class="glass-card">
+      <div class="emoji-burst" style="font-size:4rem;animation-name:none;">Γ¥ñ∩╕Å</div>
+      <h2 class="gradient-text">Congratulations.</h2>
+      <p class="secret-msg">
+        This website runs on the most powerful<br/>energy source in the universe.<br/><br/>
+        <span class="gradient-text" style="font-weight:700;font-size:1.4rem;">Your Smile.</span>
+      </p>
+      <p style="color:rgba(255,255,255,0.45);font-size:0.85rem;">You are extraordinary. Keep smiling. ≡ƒîî</p>
+      <button class="btn btn-primary" style="margin-top:1.5rem;" onclick="resetExperience()">≡ƒöä Start Again</button>
+    </div>
+    <div class="heart-container" id="heart-container"></div>
+  </section>
+
+  <script>
+  // ==============================================================
+  //  STATE
+  // ==============================================================
+  let stream        = null;
+  let detectionInt  = null;
+  let modelsLoaded  = false;
+  let energyLevel   = 0;
+  let smileActive   = false;
+  let firstSmile    = false;   // true once first smile happened
+  let energyFull    = false;
+  let audioCtx      = null;
+  const ENERGY_STEP = 14;
+
+  const COMPLIMENTS = [
+    "You just increased the brightness of this website. ΓÿÇ∩╕Å",
+    "Your smile just powered an entire universe.",
+    "System update: Mood level upgraded to awesome. ≡ƒÜÇ",
+    "Scientists are stunned ΓÇö your smile generates infinite energy.",
+    "Warning: Your smile is too powerful. Recommend shielding. ≡ƒÿà",
+    "Fun fact: Supernovas are jealous of your glow.",
+    "Your energy signature just broke our charts. ≡ƒôê",
+    "Congratulations ΓÇö you are the chosen smiler. ≡ƒÅå",
+    "Error 404: Sadness not found after seeing your smile.",
+    "You just made the stars jealous. They're trying harder now. Γ£¿",
+    "Your smile just solved world hunger. Science is looking into it.",
+    "Analysis complete: You are 100% radiant, 200% awesome.",
+  ];
+  let lastCIdx = -1;
+
+  // ==============================================================
+  //  STARS & PARTICLES
+  // ==============================================================
+  function createStarField() {
+    const sf = document.getElementById('starfield');
+    for (let i = 0; i < 160; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 2.5 + 0.5;
+      s.style.cssText = `
+        left:${Math.random()*100}%;top:${Math.random()*100}%;
+        width:${size}px;height:${size}px;
+        --dur:${(Math.random()*4+2).toFixed(1)}s;
+        --op:${(Math.random()*0.7+0.3).toFixed(2)};
+        animation-delay:${(Math.random()*5).toFixed(1)}s;
+      `;
+      sf.appendChild(s);
+    }
+  }
+
+  const cvs = document.getElementById('particles-canvas');
+  const ctx = cvs.getContext('2d');
+  let parts = [];
+
+  function resizeCvs() { cvs.width = innerWidth; cvs.height = innerHeight; }
+
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x  = Math.random() * cvs.width;
+      this.y  = Math.random() * cvs.height;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4 - 0.1;
+      this.r  = Math.random() * 2 + 0.5;
+      this.a  = Math.random() * 0.4 + 0.1;
+      this.c  = ['#9b5de5','#00b4d8','#f72585','#06d6a0'][Math.floor(Math.random()*4)];
+      this.life = 0;
+      this.max  = Math.random() * 300 + 200;
+    }
+    update() { this.x+=this.vx; this.y+=this.vy; this.life++; if(this.life>this.max||this.y<-10) this.reset(); }
+    draw() {
+      ctx.save();
+      ctx.globalAlpha = this.a * Math.sin((this.life/this.max)*Math.PI);
+      ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+      ctx.fillStyle=this.c; ctx.shadowColor=this.c; ctx.shadowBlur=8; ctx.fill();
+      ctx.restore();
+    }
+  }
+  function initParts() { parts = Array.from({length:80},()=>new Particle()); }
+  function animParts() { ctx.clearRect(0,0,cvs.width,cvs.height); parts.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(animParts); }
+
+  // ==============================================================
+  //  TYPING ANIMATION
+  // ==============================================================
+  function typeText(el, text, speed=55) {
+    return new Promise(res => {
+      let i=0; el.innerHTML='';
+      const cur = document.createElement('span'); cur.className='cursor'; el.appendChild(cur);
+      const t = setInterval(()=>{
+        if(i<text.length) el.insertBefore(document.createTextNode(text[i++]),cur);
+        else { clearInterval(t); setTimeout(()=>{cur.remove();res();},400); }
+      }, speed);
+    });
+  }
+
+  async function startTyping() {
+    const l1=document.getElementById('line1'), l2=document.getElementById('line2');
+    const sub=document.getElementById('landing-sub'), btn=document.getElementById('start-btn');
+    await new Promise(r=>setTimeout(r,500));
+    await typeText(l1,'This website runs on a rare energy sourceΓÇª',45);
+    await new Promise(r=>setTimeout(r,600));
+    l2.style.opacity='1';
+    await typeText(l2,'Your smile. ≡ƒÿè',65);
+    sub.style.opacity='1';
+    btn.style.opacity='1';
+  }
+
+  // ==============================================================
+  //  SECTION NAVIGATION
+  // ==============================================================
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(s=>{
+      s.classList.add('hidden'); s.classList.remove('visible','fade-in');
+    });
+    const el=document.getElementById(id);
+    el.classList.remove('hidden'); el.classList.add('visible','fade-in');
+  }
+
+  // ==============================================================
+  //  CAMERA ΓÇö always-on in PiP
+  // ==============================================================
+  async function goToCamera() {
+    showSection('camera-section');
+    await startCamera();
+    if (stream) startDetection();
+  }
+
+  async function startCamera() {
+    const pip   = document.getElementById('cam-pip');
+    const video = document.getElementById('webcam');
+    const grantSt = document.getElementById('grant-status');
+    const placeholder = document.getElementById('cam-placeholder');
+
+    try {
+      // Ask for camera
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width:640, height:480, facingMode:'user' }, audio:false });
+      video.srcObject = stream;
+      await video.play();
+
+      // Show PiP
+      pip.classList.add('visible');
+      document.getElementById('pip-ring').classList.add('detecting');
+      document.getElementById('pip-status').textContent = '≡ƒæÇ Looking for smileΓÇª';
+
+      // Update grant page UI
+      grantSt.innerHTML = '<span class="status-dot"></span>Camera active ΓÇö smile into the bottom-right preview!';
+      placeholder.textContent = 'Γ£à';
+      placeholder.style.borderColor = 'rgba(6,214,160,0.5)';
+
+    } catch(e) {
+      grantSt.textContent = 'ΓÜá∩╕Å Camera denied or not found.';
+      document.getElementById('demo-btn').style.display = 'inline-flex';
+      pip.classList.add('visible');   // still show PiP (will be blank)
+      document.getElementById('pip-status').textContent = '≡ƒÄ« Demo mode';
+    }
+  }
+
+  // ==============================================================
+  //  FACE DETECTION (polls every 600ms)
+  // ==============================================================
+  function startDetection() {
+    const video = document.getElementById('webcam');
+    detectionInt = setInterval(async () => {
+      if (!modelsLoaded || !stream) return;
+      try {
+        const res = await faceapi
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize:224, scoreThreshold:0.4 }))
+          .withFaceExpressions();
+        if (res) {
+          const h = res.expressions.happy;
+          const ring = document.getElementById('pip-ring');
+          if (h > 0.65 && !smileActive) {
+            smileActive = true;
+            ring.classList.remove('detecting'); ring.classList.add('smiling');
+            document.getElementById('pip-status').textContent = '≡ƒÿü Smile detected!';
+            onSmileDetected();
+            setTimeout(()=>{
+              smileActive = false;
+              ring.classList.remove('smiling'); ring.classList.add('detecting');
+              document.getElementById('pip-status').textContent = '≡ƒæÇ Looking for smileΓÇª';
+            }, 2500);
+          }
+        }
+      } catch(e) {}
+    }, 600);
+  }
+
+  // ==============================================================
+  //  SMILE CALLBACK
+  // ==============================================================
+  function onSmileDetected() {
+    playSmileSound();
+    if (!firstSmile) {
+      firstSmile = true;
+      activateBg();
+      spawnConfetti();
+      spawnStarBurst();
+      setTimeout(()=>{ showSection('smile-detected'); generateCompliment(); }, 800);
+    } else {
+      spawnMiniHearts(4);
+      spawnStarBurst();
+    }
+    if (!energyFull) {
+      energyLevel = Math.min(100, energyLevel + ENERGY_STEP);
+      updateEnergy();
+    }
+  }
+
+  // Demo trigger (no camera / models)
+  function triggerDemoSmile() {
+    if (!smileActive) { smileActive = true; onSmileDetected(); setTimeout(()=>smileActive=false,2500); }
+  }
+
+  // ==============================================================
+  //  ENERGY BAR
+  // ==============================================================
+  function updateEnergy() {
+    document.getElementById('energy-bar').style.width = energyLevel + '%';
+    document.getElementById('energy-percent').textContent = energyLevel + '%';
+    if (energyLevel >= 80) {
+      document.getElementById('energy-bar').style.background = 'linear-gradient(90deg,var(--pink),var(--gold))';
+      document.getElementById('energy-bar').style.boxShadow = '0 0 20px var(--gold)';
+    }
+    if (energyLevel >= 100) {
+      energyFull = true;
+      document.getElementById('energy-tip').textContent = '≡ƒÄë Full power! Unlock the secret now!';
+      document.getElementById('secret-unlock-wrap').style.display = 'block';
+      document.getElementById('pip-status').textContent = 'ΓÜí 100% Energy!';
+    }
+  }
+
+  // ==============================================================
+  //  COMPLIMENT
+  // ==============================================================
+  function generateCompliment() {
+    const box = document.getElementById('compliment-box');
+    let idx; do { idx = Math.floor(Math.random()*COMPLIMENTS.length); } while(idx===lastCIdx);
+    lastCIdx = idx;
+    box.style.opacity='0'; box.style.transform='scale(0.95)';
+    setTimeout(()=>{ box.textContent=COMPLIMENTS[idx]; box.style.opacity='1'; box.style.transform='scale(1)'; },200);
+  }
+
+  // ==============================================================
+  //  SECRET
+  // ==============================================================
+  function showSecret() { showSection('secret-section'); spawnHeartRain(); playSecretSound(); activateBg(); }
+
+  function resetExperience() {
+    energyLevel=0; firstSmile=false; smileActive=false; energyFull=false;
+    document.getElementById('energy-bar').style.width='0%';
+    document.getElementById('energy-bar').style.background='linear-gradient(90deg,var(--purple),var(--blue),var(--cyan))';
+    document.getElementById('energy-bar').style.boxShadow='0 0 12px var(--blue)';
+    document.getElementById('energy-percent').textContent='0%';
+    document.getElementById('secret-unlock-wrap').style.display='none';
+    document.getElementById('energy-tip').textContent='Smile again into the camera to charge! ≡ƒæå';
+    document.getElementById('line1').textContent='';
+    document.getElementById('line2').textContent='';
+    document.getElementById('line2').style.opacity='0';
+    document.getElementById('landing-sub').style.opacity='0';
+    document.getElementById('start-btn').style.opacity='0';
+    // stop camera
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    clearInterval(detectionInt); detectionInt=null;
+    document.getElementById('cam-pip').classList.remove('visible');
+    document.getElementById('pip-ring').className='pip-ring';
+    showSection('landing');
+    setTimeout(startTyping,200);
+  }
+
+  // ==============================================================
+  //  VISUAL EFFECTS
+  // ==============================================================
+  function activateBg() {
+    ['glow1','glow2','glow3'].forEach(id=>document.getElementById(id).classList.add('active'));
+    document.body.style.background='radial-gradient(ellipse at center,#1a0836 0%,#05010f 70%)';
+  }
+
+  function spawnConfetti() {
+    const clrs=['#9b5de5','#00b4d8','#f72585','#06d6a0','#ffd60a','#fff'];
+    for(let i=0;i<90;i++){
+      const c=document.createElement('div'); c.className='confetti-piece';
+      c.style.cssText=`
+        left:${Math.random()*100}vw;top:-10px;
+        background:${clrs[Math.floor(Math.random()*clrs.length)]};
+        border-radius:${Math.random()>.5?'50%':'2px'};
+        --dur:${(Math.random()*2+2).toFixed(1)}s;
+        --delay:${(Math.random()*1.5).toFixed(2)}s;
+        --dx:${(Math.random()-.5)*200}px;
+        width:${Math.random()*8+5}px;height:${Math.random()*8+5}px;
+      `;
+      document.body.appendChild(c);
+      setTimeout(()=>c.remove(),5000);
+    }
+  }
+
+  function spawnStarBurst() {
+    const clrs=['#9b5de5','#00b4d8','#f72585'];
+    for(let i=0;i<10;i++){
+      const s=document.createElement('div'); s.className='star-burst';
+      const sz=Math.random()*40+10;
+      s.style.cssText=`
+        left:${Math.random()*100}vw;top:${Math.random()*100}vh;
+        width:${sz}px;height:${sz}px;
+        background:${clrs[Math.floor(Math.random()*clrs.length)]};
+        animation-delay:${(Math.random()*.5).toFixed(2)}s;
+      `;
+      document.body.appendChild(s);
+      setTimeout(()=>s.remove(),1500);
+    }
+  }
+
+  function spawnHeartRain() {
+    const container=document.getElementById('heart-container'); container.innerHTML='';
+    const items=['Γ¥ñ∩╕Å','≡ƒÆ£','≡ƒÆÖ','≡ƒÆû','Γ£¿','≡ƒîƒ','≡ƒÆ½'];
+    const spawn=()=>{
+      for(let i=0;i<8;i++){
+        const h=document.createElement('div'); h.className='floating-heart';
+        h.textContent=items[Math.floor(Math.random()*items.length)];
+        h.style.cssText=`
+          left:${Math.random()*100}vw;bottom:${Math.random()*20}px;
+          font-size:${Math.random()*1.5+1}rem;
+          animation-duration:${(Math.random()*2+2).toFixed(1)}s;
+          animation-delay:${(Math.random()*.8).toFixed(2)}s;
+          --rot:${(Math.random()*40-20).toFixed(1)}deg;
+          --rot2:${(Math.random()*60-30).toFixed(1)}deg;
+        `;
+        container.appendChild(h);
+        setTimeout(()=>h.remove(),5500);
+      }
+    };
+    spawn();
+    const iv=setInterval(spawn,1200); setTimeout(()=>clearInterval(iv),8000);
+  }
+
+  function spawnMiniHearts(n=5){
+    const items=['Γ¥ñ∩╕Å','≡ƒÆ£','≡ƒÆÖ','≡ƒÆû'];
+    for(let i=0;i<n;i++){
+      const h=document.createElement('div'); h.className='floating-heart';
+      h.textContent=items[Math.floor(Math.random()*items.length)];
+      h.style.cssText=`
+        left:${Math.random()*100}vw;bottom:10px;font-size:1rem;
+        animation-duration:2s;animation-delay:${(i*.15).toFixed(2)}s;
+        --rot:${(Math.random()*20-10)}deg;--rot2:${(Math.random()*20-10)}deg;
+      `;
+      document.body.appendChild(h);
+      setTimeout(()=>h.remove(),3000);
+    }
+  }
+
+  // ==============================================================
+  //  AUDIO
+  // ==============================================================
+  function getAC(){ if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+
+  function playSmileSound(){
+    try {
+      const ac=getAC();
+      [523.25,659.25,783.99,1046.50].forEach((f,i)=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.connect(g); g.connect(ac.destination); o.type='sine'; o.frequency.value=f;
+        const t=ac.currentTime+i*.12;
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.18,t+.04); g.gain.linearRampToValueAtTime(0,t+.35);
+        o.start(t); o.stop(t+.4);
+      });
+    }catch(e){}
+  }
+
+  function playSecretSound(){
+    try{
+      const ac=getAC();
+      [261.63,329.63,392,523.25,659.25,783.99,1046.50].forEach((f,i)=>{
+        const o=ac.createOscillator(), g=ac.createGain();
+        o.connect(g); g.connect(ac.destination); o.type='triangle'; o.frequency.value=f;
+        const t=ac.currentTime+i*.1;
+        g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.12,t+.05); g.gain.linearRampToValueAtTime(0,t+.5);
+        o.start(t); o.stop(t+.6);
+      });
+    }catch(e){}
+  }
+
+  // ==============================================================
+  //  DRAG PiP WINDOW
+  // ==============================================================
+  (function(){
+    const pip = document.getElementById('cam-pip');
+    let dragging=false, ox=0, oy=0;
+    pip.addEventListener('mousedown', e=>{
+      dragging=true; ox=e.clientX-pip.getBoundingClientRect().left; oy=e.clientY-pip.getBoundingClientRect().top;
+      pip.style.cursor='grabbing';
+    });
+    document.addEventListener('mousemove', e=>{
+      if(!dragging) return;
+      pip.style.right='auto'; pip.style.bottom='auto';
+      pip.style.left=(e.clientX-ox)+'px'; pip.style.top=(e.clientY-oy)+'px';
+    });
+    document.addEventListener('mouseup',()=>{ dragging=false; pip.style.cursor='grab'; });
+  })();
+
+  // ==============================================================
+  //  INIT
+  // ==============================================================
+  window.addEventListener('resize', resizeCvs);
+  resizeCvs();
+  createStarField();
+  initParts();
+  animParts();
+
+  // Wait for faceapi to be ready then load models
+  async function init() {
+    document.getElementById('loading-text').textContent = 'Loading AI modelsΓÇª';
+    try {
+      // Wait until faceapi is defined (script without defer, should be immediate)
+      if (typeof faceapi === 'undefined') throw new Error('face-api not loaded');
+      const MODEL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL),
+      ]);
+      modelsLoaded = true;
+      document.getElementById('loading-text').textContent = 'Γ£à AI Ready!';
+    } catch(e) {
+      console.warn('Model load failed ΓÇö demo mode active', e);
+      modelsLoaded = false;
+      document.getElementById('loading-text').textContent = 'Demo mode (no AI)';
+    }
+    // Hide loading overlay
+    setTimeout(()=>{
+      const lo = document.getElementById('loading-overlay');
+      lo.classList.add('fade-out');
+      setTimeout(()=>{ lo.style.display='none'; },900);
+      startTyping();
+    }, 600);
+  }
+
+  init();
+  </script>
+</body>
+</html>
